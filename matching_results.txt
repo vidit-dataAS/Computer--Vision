@@ -1,0 +1,27 @@
+FEATURE MATCHING RESULTS
+==================================================
+
+
+SIFT:
+  Keypoints in Image 1: 51626
+  Keypoints in Image 2: 365
+  Good Matches: 282
+  Matching Score: 0.773
+  Inliers: 44
+  Processing Time: 10.502s
+
+ORB:
+  Keypoints in Image 1: 2000
+  Keypoints in Image 2: 1923
+  Good Matches: 6
+  Matching Score: 0.003
+  Inliers: 4
+  Processing Time: 0.427s
+
+SURF:
+  Keypoints in Image 1: 2000
+  Keypoints in Image 2: 1923
+  Good Matches: 13
+  Matching Score: 0.007
+  Inliers: 0
+  Processing Time: 0.562s
