@@ -1,0 +1,17 @@
+[project]
+name = "finhire"
+version = "1.0.0"
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "python-multipart",
+  "pdfplumber",
+  "python-docx",
+  "scikit-learn",
+  "requests",
+  "python-dotenv",
+]
+
+[tool.vercel]
+entrypoint = "backend.main:app"
