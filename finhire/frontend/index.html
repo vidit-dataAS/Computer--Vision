@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FinHire AI</title>
+<style>
+:root{--bg:#eef2f6;--card:#fff;--ink:#14202b;--mute:#5b6b7a;--line:#d5dde5;--acc:#0b5cab;--hire:#13795b;--hold:#b7791f;--rej:#c0392b}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1820;--card:#17232e;--ink:#e8eef4;--mute:#93a4b3;--line:#283745;--acc:#5aa9ee}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+main{max-width:1060px;margin:0 auto;padding:24px 16px}h1{margin:0 0 4px;font-size:26px}p.sub{margin:0 0 20px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:1fr 1.3fr;gap:16px}@media(max-width:800px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
+label{display:block;font-weight:600;margin:10px 0 4px}input,textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--ink);font:inherit}
+textarea{min-height:90px;resize:vertical}button{margin-top:12px;padding:9px 16px;border:0;border-radius:6px;background:var(--acc);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--mute);border:1px solid var(--line)}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}.stats div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+.stats b{display:block;font-size:22px}.stats span{color:var(--mute);font-size:13px}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.tag{padding:2px 8px;border-radius:99px;color:#fff;font-size:13px;font-weight:600}.Hire{background:var(--hire)}.Hold{background:var(--hold)}.Reject{background:var(--rej)}
+.bar{height:6px;background:var(--line);border-radius:3px;margin-top:4px}.bar i{display:block;height:100%;border-radius:3px;background:var(--acc)}
+.msg{margin-top:10px;color:var(--rej)}.small{color:var(--mute);font-size:13px}
+</style></head><body><main>
+<h1>FinHire AI</h1><p class="sub">Paste a job description, add resumes, get a ranked Hire, Hold or Reject with reasons.</p>
+<div class="stats" id="stats"></div>
+<div class="grid">
+<div class="card"><label for="t">Job title</label><input id="t" value="Data Analyst">
+<label for="jd">Job description</label><textarea id="jd" placeholder="Paste the job description"></textarea>
+<label for="f">Resume file (PDF, DOCX or TXT)</label><input id="f" type="file" accept=".pdf,.docx,.txt">
+<label for="r">Or paste resume text</label><textarea id="r"></textarea>
+<button id="go">Review resume</button> <button class="ghost" id="clr">Clear all</button>
+<div class="msg" id="msg" role="alert"></div><div id="last"></div></div>
+<div class="card"><b>Ranked candidates</b><table><thead><tr><th>Candidate</th><th>Match</th><th>Decision</th><th>Why</th></tr></thead><tbody id="rows"></tbody></table>
+<p class="small" id="empty">No reviews yet. Add a job description and a resume to start.</p></div></div></main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function load(){
+ const s=await (await fetch('/api/stats')).json();
+ $('stats').innerHTML=[['Reviewed',s.total],['Avg match',s.avg_score],['Hire',s.Hire],['Hold',s.Hold],['Reject',s.Reject]].map(([a,b])=>`<div><b>${b}</b><span>${a}</span></div>`).join('');
+ const rows=await (await fetch('/api/reviews')).json();
+ $('empty').style.display=rows.length?'none':'block';
+ $('rows').innerHTML=rows.map(r=>`<tr><td>${esc(r.candidate)}<div class="small">${esc(r.job_title)}</div></td><td>${r.score}<div class="bar"><i style="width:${r.score}%"></i></div></td><td><span class="tag ${r.decision}">${r.decision}</span></td><td>${esc(r.reason)}<div class="small">Matched: ${esc(r.matched.join(', '))||'none'} | Gaps: ${esc(r.gaps.join(', '))||'none'}</div></td></tr>`).join('');
+}
+$('go').onclick=async()=>{
+ $('msg').textContent='';$('go').disabled=true;$('go').textContent='Reviewing...';
+ const fd=new FormData();fd.append('job_title',$('t').value);fd.append('jd',$('jd').value);fd.append('text',$('r').value);
+ if($('f').files[0])fd.append('file',$('f').files[0]);
+ try{const res=await fetch('/api/review',{method:'POST',body:fd});const d=await res.json();
+  if(!res.ok)throw new Error(d.detail||'Review failed. Please retry.');
+  $('last').innerHTML=`<p><span class="tag ${d.decision}">${d.decision}</span> ${d.score}/100 <span class="small">(${d.engine==='groq'?'LLM':'rule-based'})</span><br>${esc(d.reason)}</p>`;
+  $('r').value='';$('f').value='';await load();
+ }catch(e){$('msg').textContent=e.message}
+ $('go').disabled=false;$('go').textContent='Review resume';
+};
+$('clr').onclick=async()=>{await fetch('/api/reviews',{method:'DELETE'});$('last').innerHTML='';load()};
+load();
+</script></body></html>
